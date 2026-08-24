@@ -1,0 +1,5 @@
+# Fase 1 — geração de credenciais OAuth
+google-auth-oauthlib
+
+# Fase 2 — extração (adicionado conforme cada script for escrito)
+google-ads

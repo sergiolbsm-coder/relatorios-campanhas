@@ -30,7 +30,14 @@ expirou em 16/05/2026, e a decisão do time foi não assinar plano pago.
   KPIs por canal ainda não formalizados (item 0.3 pendente).
 - **Fase 1** (acessos): IDs de conta das 3 marcas confirmados em `config.yaml`.
   Credenciais de API própria (Google Cloud project, Meta app, service account
-  GA4, Business Profile API) ainda **não criadas** — é o próximo passo.
+  GA4, Business Profile API) ainda **não criadas**.
+  - Item 1.1 (Google Ads): guia passo a passo pronto em
+    [docs/1.1-google-ads-api-setup.md](docs/1.1-google-ads-api-setup.md) +
+    script de geração de refresh token em
+    [etl/scripts/generate_google_ads_refresh_token.py](etl/scripts/generate_google_ads_refresh_token.py).
+    Aguardando o usuário (sergiolbsm@gmail.com) executar os passos no console
+    do Google Cloud — requer login próprio, não pode ser automatizado por mim.
+  - Itens 1.2 (Meta Ads), 1.3 (GMB), 1.4 (GA4), 1.6 (GTM): ainda não iniciados.
 - Gaps aceitos conscientemente: sem GA4 para Associação de Luto União nem para
   Trainer Sergio Moura; sem Google Ads para Trainer Sergio Moura; GTM sem
   conector pronto, pendente para Fase 2/6.

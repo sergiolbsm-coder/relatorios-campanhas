@@ -1,0 +1,108 @@
+# Configuração central de contas — Sistema de Análise de Campanhas e Métricas
+# Instituto da Liderança · Associação de Luto União (Curitiba) · Trainer Sergio Moura
+#
+# Fonte: apêndice do roadmap, autenticação validada via Supermetrics OAuth em 24/08/2026
+# (conta sergiolbsm@gmail.com). Os IDs abaixo já foram confirmados como corretos —
+# não precisam ser redescobertos nas Fases 2+.
+#
+# IMPORTANTE: este arquivo não contém segredos (client_id, client_secret, tokens).
+# Credenciais de API vivem em .env (ver .env.example), nunca aqui.
+
+brands:
+  instituto_da_lideranca:
+    display_name: "Instituto da Liderança"
+    google_ads:
+      account_id: "7613902765"
+      account_name: "Instituto da Liderança"
+      status: confirmed
+    meta_ads:
+      account_id: "act_297372404548129"
+      account_name: "institutodalideranca"
+      status: confirmed
+    instagram_insights:
+      account_id: "17841405559783535"
+      account_name: "Instituto da Liderança"
+      status: confirmed
+    google_business_profile:
+      locations:
+        - location_id: "113796278757314846456_39576352332644404"
+          name: "Instituto da Liderança"
+        - location_id: "113796278757314846456_4285619879130814748"
+          name: "Instituto da Liderança (Unidade Floripa)"
+      status: confirmed
+    ga4:
+      property_id: "450305882"
+      property_name: "Instituto da Liderança (Moura)"
+      status: confirmed
+      note: >
+        Propriedade ativa, confirmada em 24/08/2026 (mais dado histórico).
+        Existe uma segunda propriedade parecida (379676291, "INSTITUTO DA
+        LIDERANÇA – GA4") descartada por ser antiga/duplicada — não usar.
+      discarded_property_id: "379676291"
+    gtm:
+      status: pending
+      note: "Sem conector de auth via Supermetrics; auditoria manual/API própria na Fase 2/6."
+
+  associacao_luto_uniao:
+    display_name: "Associação de Luto União (Curitiba)"
+    google_ads:
+      account_id: "4001041542"
+      account_name: "Associação de Luto União"
+      note: "Acessada via MCC \"Sergio Moura\"."
+      status: confirmed
+    meta_ads:
+      account_id: "act_326623409969690"
+      account_name: "ContaLutoUniao"
+      status: confirmed
+    instagram_insights:
+      account_id: "17841415517560462"
+      account_name: "Associação de Luto União"
+      status: confirmed
+    google_business_profile:
+      locations:
+        - location_id: "113796278757314846456_1058702778814249020"
+          name: "Associação de Luto União"
+      status: confirmed
+    ga4:
+      property_id: null
+      status: gap_accepted
+      note: >
+        Não encontrada. Decisão consciente (24/08/2026): seguir sem GA4 desta
+        marca por ora — fica só com dado de anúncio + GMB, sem visão de
+        comportamento no site. Reavaliar se/quando o site tiver GA4 instalado.
+    gtm:
+      status: pending
+
+  trainer_sergio_moura:
+    display_name: "Trainer Sergio Moura (marca pessoal)"
+    google_ads:
+      account_id: null
+      status: gap_accepted
+      note: "Não encontrada. Decisão consciente (24/08/2026): seguir sem Google Ads desta marca por ora."
+    meta_ads:
+      account_id: "act_438261701670281"
+      account_name: "Sergio Moura anuncios"
+      status: confirmed
+    instagram_insights:
+      account_id: "17841400552473310"
+      account_name: "SERGIO MOURA - Treinador de Líderes"
+      status: confirmed
+    google_business_profile:
+      locations: []
+      status: not_applicable
+      note: "Marca pessoal, não é ficha de Local."
+    ga4:
+      property_id: null
+      status: gap_accepted
+      note: "Não encontrada. Reavaliar se surgir uma conta própria depois."
+    gtm:
+      status: pending
+
+# Contas visíveis na mesma conta autenticada (Google/Meta) mas fora do escopo do projeto.
+# Ignorar nos scripts de extração da Fase 2.
+out_of_scope_accounts:
+  - "Minha Recolocação"
+  - "Parada da Economia Pinhais"
+  - "Dra. Taysnara Andrade"
+  - "Dr. Lucas Silveira"
+  - "Veterinária Gabriela"

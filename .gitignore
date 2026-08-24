@@ -1,0 +1,20 @@
+# Segredos — nunca commitar
+.env
+secrets/
+*.json
+!package.json
+!docs/**/*.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Dados extraídos localmente
+etl/data/
+*.csv
+!docs/**/*.csv
+
+# Sistema
+.DS_Store

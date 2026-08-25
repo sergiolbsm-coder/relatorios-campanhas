@@ -28,8 +28,8 @@ expirou em 16/05/2026, e a decisão do time foi não assinar plano pago.
 
 - **Fase 0** (diagnóstico/arquitetura): decisão de arquitetura fechada (B).
   KPIs por canal ainda não formalizados (item 0.3 pendente).
-- **Fase 2** (extração): itens 2.1 (Google Ads) e 2.2 (Meta Ads) prontos e
-  validados com dado real (25/08/2026).
+- **Fase 2** (extração): itens 2.1 (Google Ads), 2.2 (Meta Ads) e 2.3
+  (Instagram Insights) prontos e validados com dado real (25/08/2026).
   - [etl/common.py](etl/common.py) — utilitário compartilhado: lê contas
     confirmadas do `config.yaml` (`brands_with(platform_key)`), parsing de
     período via CLI (`--start`/`--end`/`--days`), escrita de CSV padronizada
@@ -40,9 +40,16 @@ expirou em 16/05/2026, e a decisão do time foi não assinar plano pago.
   - [etl/extract_meta_ads.py](etl/extract_meta_ads.py) — idem + quebra por
     posicionamento (`publisher_platform`, `platform_position`). Testado:
     1000 linhas/30 dias, 3 marcas (paginação da Graph API funcionando).
-  - Padrão pra próximos scripts de extração (2.3 Instagram Insights, 2.5
-    GA4 quando 1.4 for retomado): reusar `etl/common.py`, mesma assinatura de
-    CLI, mesmo padrão de nome de arquivo `{fonte}_{start}_a_{end}.csv`.
+  - [etl/extract_instagram_insights.py](etl/extract_instagram_insights.py) —
+    reaproveita o mesmo `META_ACCESS_TOKEN` do Meta Ads (não precisa de novo
+    setup de credencial). Gera 2 CSVs: conta/dia (alcance, novos seguidores)
+    e mídia (posts/reels — reach, likes, comments, shares, saved, views).
+    Stories ficam fora de propósito: expiram em 24h, a API só expõe insights
+    delas em tempo real, incompatível com extração histórica retroativa.
+    Testado: 30 linhas/10 dias (conta), 4 posts/reels, 3 marcas.
+  - Padrão pra próximos scripts de extração (2.5 GA4 quando 1.4 for
+    retomado): reusar `etl/common.py`, mesma assinatura de CLI, mesmo padrão
+    de nome de arquivo `{fonte}_{start}_a_{end}.csv`.
   - Itens 2.4 (GMB) e 2.6 (auditoria GTM) dependem de 1.3 (pausado) e foram
     descartados (GTM) — não iniciar sem eles.
   - Itens 2.7 (agendamento) e 2.8 (retry/alertas) ainda não iniciados —

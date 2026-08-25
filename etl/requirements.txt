@@ -2,4 +2,4 @@
 google-auth-oauthlib
 
 # Fase 2 — extração (adicionado conforme cada script for escrito)
-google-ads
+google-ads  # validado 25/08/2026 contra Instituto da Liderança e Luto União

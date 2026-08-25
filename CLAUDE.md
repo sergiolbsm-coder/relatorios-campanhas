@@ -28,20 +28,23 @@ expirou em 16/05/2026, e a decisão do time foi não assinar plano pago.
 
 - **Fase 0** (diagnóstico/arquitetura): decisão de arquitetura fechada (B).
   KPIs por canal ainda não formalizados (item 0.3 pendente).
-- **Fase 1** (acessos): IDs de conta das 3 marcas confirmados em `config.yaml`.
-  Credenciais de API própria (Google Cloud project, Meta app, service account
-  GA4, Business Profile API) ainda **não criadas**.
-  - Item 1.1 (Google Ads): guia passo a passo pronto em
-    [docs/1.1-google-ads-api-setup.md](docs/1.1-google-ads-api-setup.md) +
-    script de geração de refresh token em
-    [etl/scripts/generate_google_ads_refresh_token.py](etl/scripts/generate_google_ads_refresh_token.py).
-    Aguardando o usuário (sergiolbsm@gmail.com) executar os passos no console
-    do Google Cloud — requer login próprio, não pode ser automatizado por mim.
-  - Item 1.2 (Meta Ads): guia pronto em
-    [docs/1.2-meta-ads-api-setup.md](docs/1.2-meta-ads-api-setup.md) —
-    usa System User (token que não expira) em vez de token de usuário comum.
-    Aguardando o usuário executar no Business Manager.
+- **Fase 1** (acessos):
+  - **Item 1.1 (Google Ads): ✅ fechado (25/08/2026).** Credenciais completas
+    no `.env` (client id/secret, refresh token, developer token nível Test).
+    Acesso real validado com
+    [etl/scripts/test_google_ads_access.py](etl/scripts/test_google_ads_access.py)
+    contra as 2 contas do projeto (Instituto da Liderança `7613902765`,
+    Associação de Luto União `4001041542` — funciona sem precisar de
+    `GOOGLE_ADS_LOGIN_CUSTOMER_ID`, apesar do MCC). Pendência não bloqueante:
+    solicitar nível Básico/Standard do developer token (nível Test já é
+    suficiente pra extrair dado das contas reais, mas tem cotas menores).
+  - **Item 1.2 (Meta Ads): ✅ fechado (25/08/2026).** `META_APP_ID`,
+    `META_APP_SECRET`, `META_ACCESS_TOKEN` no `.env`. Acesso real validado via
+    Graph API (`curl .../insights`) nas 3 contas de anúncio do projeto.
   - Itens 1.3 (GMB), 1.4 (GA4), 1.6 (GTM): ainda não iniciados.
+  - Scripts de teste em `etl/scripts/` (`test_google_ads_access.py`,
+    `generate_google_ads_refresh_token.py`) usam variáveis do `.env` —
+    reaproveitar o padrão para os próximos setups (GA4, GMB).
   - Nota de fluxo: o usuário está executando os passos via uma sessão
     separada do Claude no Chrome (navegando o console de fato), e trazendo
     o resultado/dúvidas de volta pra esta sessão. Os guias em docs/ são o

@@ -37,7 +37,15 @@ expirou em 16/05/2026, e a decisão do time foi não assinar plano pago.
     [etl/scripts/generate_google_ads_refresh_token.py](etl/scripts/generate_google_ads_refresh_token.py).
     Aguardando o usuário (sergiolbsm@gmail.com) executar os passos no console
     do Google Cloud — requer login próprio, não pode ser automatizado por mim.
-  - Itens 1.2 (Meta Ads), 1.3 (GMB), 1.4 (GA4), 1.6 (GTM): ainda não iniciados.
+  - Item 1.2 (Meta Ads): guia pronto em
+    [docs/1.2-meta-ads-api-setup.md](docs/1.2-meta-ads-api-setup.md) —
+    usa System User (token que não expira) em vez de token de usuário comum.
+    Aguardando o usuário executar no Business Manager.
+  - Itens 1.3 (GMB), 1.4 (GA4), 1.6 (GTM): ainda não iniciados.
+  - Nota de fluxo: o usuário está executando os passos via uma sessão
+    separada do Claude no Chrome (navegando o console de fato), e trazendo
+    o resultado/dúvidas de volta pra esta sessão. Os guias em docs/ são o
+    contrato entre as duas sessões — mantenha-os completos e autossuficientes.
 - Gaps aceitos conscientemente: sem GA4 para Associação de Luto União nem para
   Trainer Sergio Moura; sem Google Ads para Trainer Sergio Moura; GTM sem
   conector pronto, pendente para Fase 2/6.

@@ -28,6 +28,26 @@ expirou em 16/05/2026, e a decisão do time foi não assinar plano pago.
 
 - **Fase 0** (diagnóstico/arquitetura): decisão de arquitetura fechada (B).
   KPIs por canal ainda não formalizados (item 0.3 pendente).
+- **Fase 2** (extração): itens 2.1 (Google Ads) e 2.2 (Meta Ads) prontos e
+  validados com dado real (25/08/2026).
+  - [etl/common.py](etl/common.py) — utilitário compartilhado: lê contas
+    confirmadas do `config.yaml` (`brands_with(platform_key)`), parsing de
+    período via CLI (`--start`/`--end`/`--days`), escrita de CSV padronizada
+    em `etl/data/` (gitignored).
+  - [etl/extract_google_ads.py](etl/extract_google_ads.py) — métricas diárias
+    de campanha (impressões, cliques, custo, conversões), todas as contas
+    confirmadas. Testado: 87 linhas/30 dias, 2 marcas.
+  - [etl/extract_meta_ads.py](etl/extract_meta_ads.py) — idem + quebra por
+    posicionamento (`publisher_platform`, `platform_position`). Testado:
+    1000 linhas/30 dias, 3 marcas (paginação da Graph API funcionando).
+  - Padrão pra próximos scripts de extração (2.3 Instagram Insights, 2.5
+    GA4 quando 1.4 for retomado): reusar `etl/common.py`, mesma assinatura de
+    CLI, mesmo padrão de nome de arquivo `{fonte}_{start}_a_{end}.csv`.
+  - Itens 2.4 (GMB) e 2.6 (auditoria GTM) dependem de 1.3 (pausado) e foram
+    descartados (GTM) — não iniciar sem eles.
+  - Itens 2.7 (agendamento) e 2.8 (retry/alertas) ainda não iniciados —
+    fazem mais sentido depois de ter mais fontes extraindo.
+
 - **Fase 1** (acessos):
   - **Item 1.1 (Google Ads): ✅ fechado (25/08/2026).** Credenciais completas
     no `.env` (client id/secret, refresh token, developer token nível Test).

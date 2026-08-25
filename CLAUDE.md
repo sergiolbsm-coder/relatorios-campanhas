@@ -41,10 +41,22 @@ expirou em 16/05/2026, e a decisão do time foi não assinar plano pago.
   - **Item 1.2 (Meta Ads): ✅ fechado (25/08/2026).** `META_APP_ID`,
     `META_APP_SECRET`, `META_ACCESS_TOKEN` no `.env`. Acesso real validado via
     Graph API (`curl .../insights`) nas 3 contas de anúncio do projeto.
-  - Itens 1.3 (GMB), 1.4 (GA4), 1.6 (GTM): ainda não iniciados.
-  - Scripts de teste em `etl/scripts/` (`test_google_ads_access.py`,
-    `generate_google_ads_refresh_token.py`) usam variáveis do `.env` —
-    reaproveitar o padrão para os próximos setups (GA4, GMB).
+  - **Item 1.3 (GMB): guia pronto**, [docs/1.3-google-business-profile-setup.md](docs/1.3-google-business-profile-setup.md).
+    Diferente dos outros, exige aprovação manual da Google antes de tudo
+    (formulário em support.google.com/business/contact/api_default) —
+    é o passo bloqueante, disparar cedo. Scripts:
+    `generate_gbp_refresh_token.py`, `test_gbp_access.py`. Os IDs de location
+    no `config.yaml` vieram do Supermetrics e precisam ser confirmados via
+    API real no Passo 5 do guia (podem não bater 100% no formato).
+  - **Item 1.4 (GA4): guia pronto**, [docs/1.4-ga4-api-setup.md](docs/1.4-ga4-api-setup.md).
+    Usa service account (não passa pela tela de consentimento OAuth — mais
+    simples que Google Ads/Meta/GMB). Script: `test_ga4_access.py`.
+  - **Item 1.6 (GTM): removido do escopo do projeto (25/08/2026)** — decisão
+    do usuário. Sem conector pronto e sem valor claro de métrica de campanha.
+    Ver nota no topo do `config.yaml` se precisar reavaliar depois.
+  - Scripts de teste em `etl/scripts/` seguem um padrão: script
+    `generate_*_refresh_token.py` (quando usa OAuth) + `test_*_access.py`
+    que lê do `.env`/ambiente e confirma dado real, não só token válido.
   - Nota de fluxo: o usuário está executando os passos via uma sessão
     separada do Claude no Chrome (navegando o console de fato), e trazendo
     o resultado/dúvidas de volta pra esta sessão. Os guias em docs/ são o

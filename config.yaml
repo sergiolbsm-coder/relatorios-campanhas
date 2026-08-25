@@ -7,6 +7,12 @@
 #
 # IMPORTANTE: este arquivo não contém segredos (client_id, client_secret, tokens).
 # Credenciais de API vivem em .env (ver .env.example), nunca aqui.
+#
+# DECISÃO (25/08/2026): GTM (item 1.6 do roadmap) foi removido do escopo do
+# projeto — sem conector de auth pronto e sem valor claro de métrica (é
+# auditoria de instrumentação, não fonte de dado de campanha). Se precisar
+# reavaliar, o item original descrevia: "auditoria de tags/triggers ativos,
+# sinalizar tags sem trigger ou sem publicação recente".
 
 brands:
   instituto_da_lideranca:
@@ -39,9 +45,6 @@ brands:
         Existe uma segunda propriedade parecida (379676291, "INSTITUTO DA
         LIDERANÇA – GA4") descartada por ser antiga/duplicada — não usar.
       discarded_property_id: "379676291"
-    gtm:
-      status: pending
-      note: "Sem conector de auth via Supermetrics; auditoria manual/API própria na Fase 2/6."
 
   associacao_luto_uniao:
     display_name: "Associação de Luto União (Curitiba)"
@@ -70,8 +73,6 @@ brands:
         Não encontrada. Decisão consciente (24/08/2026): seguir sem GA4 desta
         marca por ora — fica só com dado de anúncio + GMB, sem visão de
         comportamento no site. Reavaliar se/quando o site tiver GA4 instalado.
-    gtm:
-      status: pending
 
   trainer_sergio_moura:
     display_name: "Trainer Sergio Moura (marca pessoal)"
@@ -95,8 +96,6 @@ brands:
       property_id: null
       status: gap_accepted
       note: "Não encontrada. Reavaliar se surgir uma conta própria depois."
-    gtm:
-      status: pending
 
 # Contas visíveis na mesma conta autenticada (Google/Meta) mas fora do escopo do projeto.
 # Ignorar nos scripts de extração da Fase 2.

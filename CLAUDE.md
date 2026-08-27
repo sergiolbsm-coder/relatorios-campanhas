@@ -28,6 +28,39 @@ expirou em 16/05/2026, e a decisão do time foi não assinar plano pago.
 
 - **Fase 0** (diagnóstico/arquitetura): decisão de arquitetura fechada (B).
   KPIs por canal ainda não formalizados (item 0.3 pendente).
+- **Fase 4** (dashboard): item 4.1 fechado (26/08/2026). Decisão do usuário:
+  **Looker Studio + Google Sheets** (não SQLite direto — Looker Studio não
+  conecta nativamente em SQLite).
+  - [docs/4.1-looker-studio-setup.md](docs/4.1-looker-studio-setup.md) —
+    guia completo. Fluxo: `db/analise_campanhas.db` →
+    [etl/export_to_sheets.py](etl/export_to_sheets.py) → Google Sheets →
+    Looker Studio.
+  - Reaproveita `GOOGLE_ADS_CLIENT_ID/SECRET` (mesmo client OAuth do item
+    1.1) com escopo novo (`spreadsheets` + `drive.file`), token próprio em
+    `GOOGLE_SHEETS_REFRESH_TOKEN`. Script de geração:
+    `etl/scripts/generate_sheets_refresh_token.py`.
+  - Planilha criada e populada:
+    https://docs.google.com/spreadsheets/d/1RoIQ7lFwbxTPHokGTzeJ_X84P5EUNqWXjBsK4AQVw7w
+    (ID em `GOOGLE_SHEETS_SPREADSHEET_ID`). 1137 linhas exportadas
+    (`fact_metrics_daily` completo), testado idempotente (reexecução
+    reaproveita a mesma planilha, não cria outra).
+  - **Ainda falta o usuário conectar essa planilha no Looker Studio**
+    (Passo 4 do guia) e criar o relatório — isso não pode ser automatizado
+    daqui, é interação manual na UI do Looker Studio.
+  - Pendência descoberta durante o setup: além da Sheets API, o `gspread`
+    também precisa da **Google Drive API** habilitada (usa Drive por baixo
+    pra criar o arquivo) — ambas ativadas no projeto `campanha-instituto`.
+  - **Bug corrigido no processo**: o `.env` tinha ficado dessincronizado do
+    `.env.example` por várias rodadas (ainda tinha `GTM_*` removido, faltava
+    `GA4_SERVICE_ACCOUNT_JSON_PATH`/`GOOGLE_SHEETS_*`) porque um script antigo
+    só fazia `pattern.sub` sem fallback de append quando a chave não existia
+    ainda no arquivo — o `print` de sucesso rodava incondicionalmente mesmo
+    sem ter escrito nada. Corrigido via merge (.env.example como template +
+    valores reais do .env antigo preservados). Ao adicionar uma nova
+    variável de ambiente a `.env.example` no futuro, **sempre conferir que
+    ela também existe no `.env` real** antes de assumir que está tudo
+    sincronizado — não confiar só na mensagem de print de scripts one-off.
+
 - **Fase 3** (modelagem e banco): itens 3.1, 3.2, 3.3 e 3.4 prontos e
   validados (26/08/2026). Decisão: **SQLite** em vez de Postgres/planilha —
   zero servidor, ainda SQL de verdade com upsert/índices, suficiente pra essa

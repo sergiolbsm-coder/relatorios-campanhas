@@ -28,6 +28,29 @@ expirou em 16/05/2026, e a decisão do time foi não assinar plano pago.
 
 - **Fase 0** (diagnóstico/arquitetura): decisão de arquitetura fechada (B).
   KPIs por canal ainda não formalizados (item 0.3 pendente).
+- **Fase 3** (modelagem e banco): itens 3.1, 3.2, 3.3 e 3.4 prontos e
+  validados (26/08/2026). Decisão: **SQLite** em vez de Postgres/planilha —
+  zero servidor, ainda SQL de verdade com upsert/índices, suficiente pra essa
+  escala (3 marcas, poucas dezenas de campanhas).
+  - [db/schema.sql](db/schema.sql) — 2 tabelas fato (grãos diferentes):
+    `fact_metrics_daily` (Google Ads + Meta Ads + Instagram orgânico
+    agregado por conta/dia — o que permite comparar canais lado a lado) e
+    `fact_instagram_media` (post/reel individual, métricas de vida inteira,
+    grão incompatível com a fato diária). Dimensões: `dim_brand`,
+    `dim_channel`.
+  - [etl/load_to_sqlite.py](etl/load_to_sqlite.py) — lê o CSV mais recente
+    de cada fonte em `etl/data/`, normaliza nome de marca pra `brand_key`
+    (`brand_key_by_display_name()` em `etl/common.py`), e faz upsert via
+    `natural_key` (date|brand|channel|account|campaign|placement) —
+    **testado idempotente**: rodar 2x não duplica (1141 linhas processadas,
+    1141 no banco nas duas rodadas).
+  - Banco fica em `db/analise_campanhas.db` (gitignored — só o schema.sql
+    é versionado). Rebuild do zero: `python3 etl/load_to_sqlite.py --rebuild`.
+  - Ajuste retroativo: `extract_meta_ads.py` (2.2) passou a capturar
+    `campaign_id` (faltava, só tinha `campaign_name`) — necessário pra chave
+    natural do banco.
+  - Item 3.5 (testes automatizados de qualidade) ainda não iniciado.
+
 - **Fase 2** (extração): itens 2.1 (Google Ads), 2.2 (Meta Ads) e 2.3
   (Instagram Insights) prontos e validados com dado real (25/08/2026).
   - [etl/common.py](etl/common.py) — utilitário compartilhado: lê contas

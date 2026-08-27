@@ -21,7 +21,7 @@ from etl.common import brands_with, date_range_args, resolve_date_range, write_c
 
 GRAPH_API_VERSION = "v21.0"
 FIELDNAMES = [
-    "date", "brand", "account_id", "campaign_name", "publisher_platform",
+    "date", "brand", "account_id", "campaign_id", "campaign_name", "publisher_platform",
     "platform_position", "impressions", "clicks", "spend",
 ]
 
@@ -31,7 +31,7 @@ def extract_account(access_token: str, brand_name: str, account_id: str, start, 
     params = {
         "access_token": access_token,
         "level": "campaign",
-        "fields": "campaign_name,impressions,clicks,spend",
+        "fields": "campaign_id,campaign_name,impressions,clicks,spend",
         "breakdowns": "publisher_platform,platform_position",
         "time_increment": 1,
         "time_range": f'{{"since":"{start.isoformat()}","until":"{end.isoformat()}"}}',
@@ -52,6 +52,7 @@ def extract_account(access_token: str, brand_name: str, account_id: str, start, 
                 "date": row.get("date_start"),
                 "brand": brand_name,
                 "account_id": account_id,
+                "campaign_id": row.get("campaign_id"),
                 "campaign_name": row.get("campaign_name"),
                 "publisher_platform": row.get("publisher_platform"),
                 "platform_position": row.get("platform_position"),

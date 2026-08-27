@@ -17,6 +17,8 @@ import yaml
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 CONFIG_PATH = PROJECT_ROOT / "config.yaml"
 DATA_DIR = PROJECT_ROOT / "etl" / "data"
+DB_PATH = PROJECT_ROOT / "db" / "analise_campanhas.db"
+SCHEMA_PATH = PROJECT_ROOT / "db" / "schema.sql"
 
 
 def load_config() -> dict:
@@ -40,6 +42,13 @@ def brands_with(platform_key: str) -> list[tuple[str, str, dict]]:
             continue
         result.append((brand_key, brand["display_name"], platform))
     return result
+
+
+def brand_key_by_display_name() -> dict[str, str]:
+    """Mapa display_name -> brand_key, para converter o 'brand' (nome bonito)
+    que os CSVs de extração gravam de volta na chave normalizada do banco."""
+    config = load_config()
+    return {brand["display_name"]: key for key, brand in config["brands"].items()}
 
 
 def date_range_args(parser: argparse.ArgumentParser) -> None:

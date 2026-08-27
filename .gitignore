@@ -16,5 +16,8 @@ etl/data/
 *.csv
 !docs/**/*.csv
 
+# Banco local (SQLite) — schema.sql fica versionado, o arquivo de dados não
+db/*.db
+
 # Sistema
 .DS_Store

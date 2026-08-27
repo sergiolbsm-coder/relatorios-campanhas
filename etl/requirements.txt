@@ -7,3 +7,5 @@ google-analytics-data  # GA4 Data API (item 1.4)
 requests  # chamadas REST à Business Profile API e Meta Graph API
 pyyaml  # leitura do config.yaml (etl/common.py)
 gspread  # export para Google Sheets (item 4.1, ponte pro Looker Studio)
+matplotlib  # gráficos do relatório PDF (generate_pdf_report.py)
+reportlab  # montagem do PDF (generate_pdf_report.py)

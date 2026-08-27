@@ -13,6 +13,8 @@ Na primeira execução (sem GOOGLE_SHEETS_SPREADSHEET_ID no ambiente), cria
 uma planilha nova e imprime o ID — cole em .env pra reutilizar nas próximas.
 """
 
+import csv
+import glob
 import os
 import sqlite3
 import sys
@@ -22,10 +24,25 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import gspread
 from google.oauth2.credentials import Credentials
 
-from etl.common import DB_PATH
+from etl.common import DATA_DIR, DB_PATH
 
 SHEET_TITLE = "Análise de Campanhas — Dados"
 WORKSHEET_NAME = "dados_diarios"
+
+# Abas extras exportadas direto de CSV (não passam pelo SQLite — são
+# agregados de período, não série diária, e não se encaixam no schema
+# de fact_metrics_daily). padrão de arquivo -> nome da aba.
+EXTRA_CSV_TABS = {
+    "meta_ads_overview_*.csv": "meta_visao_geral",
+    "meta_ads_demographics_*.csv": "meta_demografia",
+    "meta_ads_top_ads_*.csv": "meta_top_anuncios",
+    "google_ads_overview_*.csv": "google_visao_geral",
+    "google_ads_device_*.csv": "google_dispositivo",
+    "google_ads_day_of_week_*.csv": "google_dia_semana",
+    "google_ads_keywords_*.csv": "google_palavras_chave",
+    "instagram_demographics_age_gender.csv": "instagram_demografia",
+    "instagram_demographics_city.csv": "instagram_cidades",
+}
 
 QUERY = """
     SELECT
@@ -67,6 +84,25 @@ def load_rows() -> list[list]:
     return rows
 
 
+def export_csv_tab(sh, pattern: str, worksheet_name: str) -> None:
+    matches = sorted(glob.glob(str(DATA_DIR / pattern)))
+    if not matches:
+        print(f"  (nenhum CSV casando '{pattern}', pulando aba '{worksheet_name}')")
+        return
+    path = matches[-1]
+    with open(path, encoding="utf-8") as f:
+        rows = list(csv.reader(f))
+
+    try:
+        ws = sh.worksheet(worksheet_name)
+    except gspread.WorksheetNotFound:
+        ws = sh.add_worksheet(title=worksheet_name, rows=1, cols=len(rows[0]) if rows else 10)
+
+    ws.clear()
+    ws.update(values=rows, range_name="A1")
+    print(f"  '{worksheet_name}': {len(rows) - 1} linha(s) de {os.path.basename(path)}")
+
+
 def main() -> None:
     gc = build_client()
 
@@ -88,6 +124,10 @@ def main() -> None:
     ws.clear()
     ws.update(values=[HEADER] + rows, range_name="A1")
     print(f"Exportado: {len(rows)} linha(s) para a aba '{WORKSHEET_NAME}'.")
+
+    print("Exportando abas extras...")
+    for pattern, worksheet_name in EXTRA_CSV_TABS.items():
+        export_csv_tab(sh, pattern, worksheet_name)
 
 
 if __name__ == "__main__":

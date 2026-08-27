@@ -24,6 +24,52 @@ expirou em 16/05/2026, e a decisão do time foi não assinar plano pago.
 - `dashboard/` — camada de visualização (Fase 4).
 - `docs/` — decisões de projeto e documentação.
 
+## Decisão estratégica (27/08/2026): substituir o mLabs
+
+O time usava o **mLabs** pra gerar relatórios de cliente (PDF rico:
+Meta Ads + Google Ads + Instagram + GMB, com demografia, palavras-chave,
+top anúncios/posts, funil). Decisão do usuário: **parar de usar o mLabs e
+construir nossa própria ferramenta de relatório** — dá flexibilidade pra
+atender outros clientes no futuro, sem depender de outra ferramenta paga.
+
+- [etl/generate_pdf_report.py](etl/generate_pdf_report.py) — gera um PDF
+  por marca (matplotlib + reportlab, sem dependência de sistema tipo
+  poppler/weasyprint — só pip), no estilo do relatório de referência do
+  mLabs: cards de visão geral com comparação de período, funil, séries
+  temporais, tabelas de campanha, demografia, top anúncios. **GMB fica de
+  fora** — bloqueado pela aprovação pendente da API (item 1.3), isso é
+  factual, não dá pra contornar com mais tempo de trabalho.
+  Uso: `python3 etl/generate_pdf_report.py --brand <chave_config.yaml> --days 30`
+- Pra alimentar isso, 3 extratores complementares novos (métricas de
+  **período**, não diárias — reach/frequency não são somáveis por dia sem
+  contagem duplicada, por isso não cabem em `fact_metrics_daily`):
+  - [etl/extract_meta_ads_overview.py](etl/extract_meta_ads_overview.py) —
+    reach, frequency, CPC, CPM, CTR com comparação vs. período anterior;
+    demografia idade/gênero; top anúncios (nível ad, não campanha).
+  - [etl/extract_google_ads_overview.py](etl/extract_google_ads_overview.py) —
+    overview com comparação; dispositivo; dia da semana; top 30 palavras-chave
+    (via `keyword_view`). Cidades ficaram de fora (exige lookup extra de
+    `geo_target_constant`, não coube no tempo).
+  - [etl/extract_instagram_demographics.py](etl/extract_instagram_demographics.py) —
+    demografia idade/gênero e top cidades dos seguidores (`follower_demographics`,
+    métrica lifetime). "Seguidores online por horário" tentado e descartado —
+    API retornou vazio pra essas contas.
+  - Essas 3 fontes exportam pra abas extras na mesma planilha Google via
+    `export_to_sheets.py` (dicionário `EXTRA_CSV_TABS`), preservado como
+    backup/auditoria mesmo não sendo o caminho principal de dado pro PDF
+    (o PDF lê direto do SQLite + dos CSVs mais recentes em `etl/data/`).
+  - Primeiro relatório real gerado e entregue pro usuário: Associação de
+    Luto União, 30 dias, 7 páginas, nomes de campanha batendo com o PDF de
+    referência do mLabs.
+- **Ainda não coberto** (matéria pendente se quiser seguir aumentando a
+  paridade com o mLabs): GMB (bloqueado, ver acima), cidades no Google Ads,
+  top posts/reels do Instagram no PDF (o dado já existe em
+  `fact_instagram_media`, só não foi plugado no gerador ainda), stories
+  (fora de escopo — expiram em 24h).
+- O Looker Studio (Fase 4 abaixo) segue existindo e funcional, mas deixou
+  de ser o entregável principal pro cliente — o PDF é o que substitui o
+  mLabs. Looker Studio continua útil pra visão interna/exploração ad-hoc.
+
 ## Estado atual (24/08/2026)
 
 - **Fase 0** (diagnóstico/arquitetura): decisão de arquitetura fechada (B).

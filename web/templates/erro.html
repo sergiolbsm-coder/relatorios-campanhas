@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Erro ao gerar relatório{% endblock %}
+{% block content %}
+  <h1>Não deu pra gerar o relatório</h1>
+  <p class="subtitle">Alguma extração falhou. Detalhes técnicos abaixo (mande pro Sergio se precisar de ajuda):</p>
+  <pre style="background:#f5f5f5; padding:12px; border-radius:8px; font-size:11px; overflow-x:auto; white-space:pre-wrap;">{{ log }}</pre>
+  <a class="logout" href="javascript:history.back()">&larr; Voltar</a>
+{% endblock %}

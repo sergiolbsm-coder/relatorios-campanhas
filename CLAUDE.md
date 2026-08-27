@@ -24,6 +24,33 @@ expirou em 16/05/2026, e a decisão do time foi não assinar plano pago.
 - `dashboard/` — camada de visualização (Fase 4).
 - `docs/` — decisões de projeto e documentação.
 
+## Interface web (27/08/2026)
+
+- [web/app.py](web/app.py) — Flask, login por senha (sem cadastro de
+  usuário): `ADMIN_PASSCODE` vê as 3 marcas, `PASSCODE_<CHAVE_DA_MARCA>`
+  (maiúsculo, chave do `config.yaml`) só vê a própria — cliente acessa
+  direto, testado que não dá pra ver outra marca pela URL (403).
+  Botão "Gerar relatório" chama [etl/run_pipeline.py](etl/run_pipeline.py)
+  (orquestra as 6 extrações + carga no banco + PDF) via subprocess e
+  devolve o arquivo pra download. ~30-90s por geração (chamadas reais de
+  API) — aceito, não precisa ser instantâneo.
+  - Testado localmente de ponta a ponta (login admin, login cliente,
+    bloqueio de acesso cruzado, geração real com download).
+  - **Bug corrigido durante o teste**: `load_to_sqlite.py` usava
+    `google_ads_*.csv` / `meta_ads_*.csv` como padrão de busca do CSV mais
+    recente — isso casava também com os CSVs novos de overview
+    (`google_ads_overview_*.csv` etc.), carregando o arquivo errado.
+    Corrigido pra `google_ads_2*.csv` / `meta_ads_2*.csv` (só os que começam
+    com ano). Vale lembrar disso ao criar qualquer CSV novo com prefixo
+    parecido no futuro.
+  - Deploy: **GitHub (upload manual, sem gh/SSH configurado nesta máquina —
+    mesmo padrão do projeto sipat-quiz) + Render**, seguindo
+    [render.yaml](render.yaml) (`env: python`, gunicorn, todas as credenciais
+    como env vars `sync: false` — setadas manualmente no painel do Render,
+    nunca commitadas). `requirements.txt` na raiz do repo (Render espera lá).
+  - Ainda não publicado — próximo passo é o usuário criar o repo no GitHub
+    (upload manual dos arquivos) e conectar no Render.
+
 ## Decisão estratégica (27/08/2026): substituir o mLabs
 
 O time usava o **mLabs** pra gerar relatórios de cliente (PDF rico:

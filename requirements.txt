@@ -1,0 +1,20 @@
+# Requirements combinados (etl/requirements.txt + web) — Render instala a
+# partir da raiz do repo.
+
+# Fase 1 — OAuth
+google-auth-oauthlib
+
+# Fase 2 — extração
+google-ads
+google-analytics-data
+requests
+pyyaml
+gspread
+
+# Relatório PDF
+matplotlib
+reportlab
+
+# Interface web
+flask
+gunicorn

@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: relatorios-campanhas
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --chdir . --timeout 120 -b 0.0.0.0:$PORT web.app:app
+    envVars:
+      - key: FLASK_SECRET_KEY
+        sync: false
+      - key: ADMIN_PASSCODE
+        sync: false
+      - key: PASSCODE_ASSOCIACAO_LUTO_UNIAO
+        sync: false
+      - key: PASSCODE_INSTITUTO_DA_LIDERANCA
+        sync: false
+      - key: PASSCODE_TRAINER_SERGIO_MOURA
+        sync: false
+      - key: GOOGLE_ADS_CLIENT_ID
+        sync: false
+      - key: GOOGLE_ADS_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_ADS_REFRESH_TOKEN
+        sync: false
+      - key: GOOGLE_ADS_DEVELOPER_TOKEN
+        sync: false
+      - key: GOOGLE_ADS_LOGIN_CUSTOMER_ID
+        sync: false
+      - key: META_APP_ID
+        sync: false
+      - key: META_APP_SECRET
+        sync: false
+      - key: META_ACCESS_TOKEN
+        sync: false

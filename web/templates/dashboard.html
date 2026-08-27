@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Gerar relatório{% endblock %}
+{% block content %}
+  <h1>{% if selected_brand_name %}{{ selected_brand_name }}{% else %}Escolha uma marca{% endif %}</h1>
+  <p class="subtitle">
+    {% if role == 'admin' %}Painel interno — todas as marcas{% else %}Gere seu relatório em PDF{% endif %}
+  </p>
+
+  {% if role == 'admin' %}
+    <div class="brand-list">
+      {% for key, brand in brands.items() %}
+        <a href="{{ url_for('dashboard', brand=key) }}" class="{{ 'active' if key == selected_brand else '' }}">
+          {{ brand.display_name }}
+        </a>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if selected_brand %}
+    <form id="gerar-form" method="post" action="{{ url_for('gerar') }}">
+      <input type="hidden" name="brand" value="{{ selected_brand }}">
+      <label for="days">Período</label>
+      <select id="days" name="days">
+        {% for d in day_presets %}
+          <option value="{{ d }}" {{ 'selected' if d == 30 else '' }}>Últimos {{ d }} dias</option>
+        {% endfor %}
+      </select>
+      <button type="submit" id="gerar-btn">Gerar relatório</button>
+      <div id="spinner">Gerando... isso leva de 30 a 90 segundos, aguarde.</div>
+    </form>
+    <script>
+      document.getElementById('gerar-form').addEventListener('submit', function () {
+        var btn = document.getElementById('gerar-btn');
+        btn.disabled = true;
+        btn.textContent = 'Gerando...';
+        document.getElementById('spinner').style.display = 'block';
+        // O download não navega a página (é um anexo), então não tem como
+        // saber com certeza quando terminou — depois de um tempo plausível,
+        // reabilita o botão e avisa que o PDF já deve ter baixado.
+        setTimeout(function () {
+          btn.disabled = false;
+          btn.textContent = 'Gerar relatório';
+          document.getElementById('spinner').textContent =
+            'Pronto — confira os downloads do navegador. Se não baixou, tente de novo.';
+        }, 95000);
+      });
+    </script>
+  {% endif %}
+
+  <a class="logout" href="{{ url_for('logout') }}">Sair</a>
+{% endblock %}

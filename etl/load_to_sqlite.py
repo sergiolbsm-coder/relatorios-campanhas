@@ -90,7 +90,7 @@ def upsert_daily(conn, brand_key, channel, account_id, campaign_id, campaign_nam
 
 
 def load_google_ads(conn, brand_map) -> int:
-    path = latest_csv("google_ads_*.csv")
+    path = latest_csv("google_ads_2*.csv")  # não casar com google_ads_overview_/device_/etc
     if not path:
         print("  (nenhum CSV de google_ads encontrado, pulando)")
         return 0
@@ -109,7 +109,7 @@ def load_google_ads(conn, brand_map) -> int:
 
 
 def load_meta_ads(conn, brand_map) -> int:
-    path = latest_csv("meta_ads_*.csv")
+    path = latest_csv("meta_ads_2*.csv")  # não casar com meta_ads_overview_/demographics_/top_ads_
     if not path:
         print("  (nenhum CSV de meta_ads encontrado, pulando)")
         return 0

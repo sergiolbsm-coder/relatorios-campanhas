@@ -187,6 +187,90 @@ def data_table(header, rows, col_widths=None):
     return t
 
 
+FIELD_LABELS_META = [
+    ("clicks", "Cliques"), ("impressions", "Impressões"), ("spend", "Investimento"),
+    ("reach", "Alcance"), ("frequency", "Frequência"), ("cpc", "CPC médio"),
+    ("cpm", "CPM médio"), ("ctr", "CTR"),
+]
+FIELD_LABELS_GOOGLE = [
+    ("clicks", "Cliques"), ("impressions", "Impressões"),
+    ("cost", "Investimento"), ("conversions", "Conversões"),
+]
+GOOD_WHEN_UP = {"clicks", "impressions", "reach", "conversions", "ctr", "new_followers"}
+GOOD_WHEN_DOWN = {"spend", "cost", "cpc", "cpm", "frequency"}
+PLURAL_FIELDS = {"clicks", "impressions", "conversions", "new_followers"}  # concordância do verbo
+
+
+def fmt_field_value(field, v):
+    try:
+        v = float(v)
+    except (TypeError, ValueError):
+        return "—"
+    if field in ("spend", "cost", "cpc", "cpm"):
+        return f"R$ {fmt_num(v, 2)}"
+    if field == "ctr":
+        return f"{fmt_num(v, 2)}%"
+    if field == "frequency":
+        return fmt_num(v, 2)
+    return fmt_num(v)
+
+
+def comparison_table(overview_row, fields_labels):
+    """Tabela período atual x período anterior x variação — o comparativo
+    explícito (não só a setinha do card) pedido pro relatório."""
+    rows = []
+    for field, label in fields_labels:
+        cur = overview_row.get(field)
+        prev = overview_row.get(f"{field}_prev")
+        pct = overview_row.get(f"{field}_pct_change")
+        rows.append([label, fmt_field_value(field, cur), fmt_field_value(field, prev), fmt_pct(pct)])
+    return data_table(
+        ["Métrica", "Período atual", "Período anterior", "Variação"],
+        rows, col_widths=[55 * mm, 40 * mm, 40 * mm, 35 * mm],
+    )
+
+
+def interpret_change(field, pct):
+    if pct in ("", None, "novo"):
+        return None
+    try:
+        pct = float(pct)
+    except (TypeError, ValueError):
+        return None
+    magnitude = abs(pct)
+    if magnitude < 1:
+        return None  # variação irrelevante pra citar em texto
+    plural = field in PLURAL_FIELDS
+    if pct >= 0:
+        direction = "subiram" if plural else "subiu"
+    else:
+        direction = "caíram" if plural else "caiu"
+    qualifier = "leve" if magnitude < 15 else ("expressiva" if magnitude < 40 else "forte")
+    is_good = (pct >= 0) == (field in GOOD_WHEN_UP)
+    return {"direction": direction, "magnitude": magnitude, "qualifier": qualifier, "is_good": is_good}
+
+
+def build_channel_narrative(overview_row, fields_labels, max_points=3):
+    """Gera 2-3 frases em português interpretando as maiores variações do
+    período — não é texto fixo, é calculado em cima do pct_change real."""
+    changes = []
+    for field, label in fields_labels:
+        info = interpret_change(field, overview_row.get(f"{field}_pct_change"))
+        if info:
+            changes.append((label, info))
+    if not changes:
+        return None
+    changes.sort(key=lambda x: -x[1]["magnitude"])
+    sentences = []
+    for label, info in changes[:max_points]:
+        tone = "o que é positivo" if info["is_good"] else "o que pede atenção"
+        sentences.append(
+            f"{label} {info['direction']} {fmt_num(info['magnitude'], 1)}% em relação ao "
+            f"período anterior ({info['qualifier']}) — {tone}."
+        )
+    return " ".join(sentences)
+
+
 def _mpl_style(ax, title):
     ax.set_title(title, fontsize=9, loc="left", color="#24153E", fontweight="bold")
     ax.tick_params(axis="x", labelsize=6, rotation=45, colors="#6F667E")
@@ -259,6 +343,15 @@ def build_meta_section(story, brand_key, brand_display, start, end):
             ("Frequência", fmt_num(o["frequency"], 2), fmt_pct(o["frequency_pct_change"])),
         ]
         story.append(scorecard_table(cards))
+
+        narrative = build_channel_narrative(o, FIELD_LABELS_META)
+        if narrative:
+            story.append(Spacer(1, 3 * mm))
+            story.append(Paragraph(narrative, normal))
+        story.append(Spacer(1, 3 * mm))
+        story.append(Paragraph("Comparativo com o período anterior", normal))
+        story.append(comparison_table(o, FIELD_LABELS_META))
+        story.append(Spacer(1, 4 * mm))
 
     conn = sqlite3.connect(DB_PATH)
     rows = conn.execute(
@@ -339,6 +432,15 @@ def build_google_section(story, brand_key, brand_display, start, end):
             ("Conversões", fmt_num(o["conversions"]), fmt_pct(o["conversions_pct_change"])),
         ]
         story.append(scorecard_table(cards))
+
+        narrative = build_channel_narrative(o, FIELD_LABELS_GOOGLE)
+        if narrative:
+            story.append(Spacer(1, 3 * mm))
+            story.append(Paragraph(narrative, normal))
+        story.append(Spacer(1, 3 * mm))
+        story.append(Paragraph("Comparativo com o período anterior", normal))
+        story.append(comparison_table(o, FIELD_LABELS_GOOGLE))
+        story.append(Spacer(1, 4 * mm))
 
     conn = sqlite3.connect(DB_PATH)
     rows = conn.execute(
@@ -434,11 +536,80 @@ def build_instagram_section(story, brand_key, brand_display, start, end):
         new_followers = [r[2] or 0 for r in rows]
         total_reach = sum(reach)
         total_new_followers = sum(new_followers)
+
+        # Período anterior de mesma duração, se já tiver dado carregado no banco
+        days = (end - start).days + 1
+        prev_end = start - datetime.timedelta(days=1)
+        prev_start = prev_end - datetime.timedelta(days=days - 1)
+        conn2 = sqlite3.connect(DB_PATH)
+        prev_reach, prev_followers, prev_count = conn2.execute(
+            """
+            SELECT SUM(f.reach), SUM(f.new_followers), COUNT(*)
+            FROM fact_metrics_daily f
+            WHERE f.brand_key = ? AND f.channel = 'instagram_organic'
+              AND f.date >= ? AND f.date <= ?
+            """,
+            (brand_key, prev_start.isoformat(), prev_end.isoformat()),
+        ).fetchone()
+        conn2.close()
+        prev_reach = prev_reach or 0
+        prev_followers = prev_followers or 0
+
+        def _pct(cur, prev):
+            if not prev:
+                return None
+            return (cur - prev) / prev * 100
+
+        # Só compara se o período anterior tem cobertura de dias parecida com
+        # a do atual — poucos dias soltos no banco (ex.: 2 de 27) produzem uma
+        # variação % tecnicamente real mas enganosa, então tratamos como "sem
+        # dado" nesse caso.
+        has_comparable_prev = prev_count and prev_count >= max(1, len(rows) * 0.6)
+        reach_pct = _pct(total_reach, prev_reach) if has_comparable_prev else None
+        followers_pct = _pct(total_new_followers, prev_followers) if has_comparable_prev else None
+
         cards = [
-            ("Alcance no período", fmt_num(total_reach), "—"),
-            ("Novos seguidores", fmt_num(total_new_followers), "—"),
+            ("Alcance no período", fmt_num(total_reach), fmt_pct(reach_pct) if reach_pct is not None else "—"),
+            ("Novos seguidores", fmt_num(total_new_followers), fmt_pct(followers_pct) if followers_pct is not None else "—"),
         ]
         story.append(scorecard_table(cards))
+
+        if has_comparable_prev:
+            story.append(Spacer(1, 3 * mm))
+            bits = []
+            if reach_pct is not None:
+                arrow = "cresceu" if reach_pct >= 0 else "caiu"
+                bits.append(
+                    f"O alcance orgânico {arrow} {abs(reach_pct):.1f}% frente ao período anterior "
+                    f"({fmt_num(prev_reach)} → {fmt_num(total_reach)})."
+                )
+            if followers_pct is not None:
+                arrow = "aumentaram" if followers_pct >= 0 else "diminuíram"
+                bits.append(
+                    f"Novos seguidores {arrow} {abs(followers_pct):.1f}% "
+                    f"({fmt_num(prev_followers)} → {fmt_num(total_new_followers)})."
+                )
+            if bits:
+                story.append(Paragraph(" ".join(bits), normal))
+            story.append(Spacer(1, 3 * mm))
+            story.append(Paragraph("Comparativo com o período anterior", normal))
+            story.append(data_table(
+                ["Métrica", "Período atual", "Período anterior", "Variação"],
+                [
+                    ["Alcance", fmt_num(total_reach), fmt_num(prev_reach), fmt_pct(reach_pct)],
+                    ["Novos seguidores", fmt_num(total_new_followers), fmt_num(prev_followers), fmt_pct(followers_pct)],
+                ],
+                col_widths=[55 * mm, 40 * mm, 40 * mm, 35 * mm],
+            ))
+        else:
+            story.append(Spacer(1, 2 * mm))
+            story.append(Paragraph(
+                "Ainda não há dado do período anterior no banco para comparar — "
+                "isso se resolve nos próximos relatórios, conforme o histórico acumula.",
+                small,
+            ))
+        story.append(Spacer(1, 4 * mm))
+
         chart_path = line_chart(dates, {"Alcance": reach}, "Alcance diário", f"{brand_key}_ig_reach.png")
         story.append(Image(chart_path, width=170 * mm, height=170 * mm * 2.6 / 6.8))
         chart_path2 = bar_chart([d.strftime("%d/%m") for d in dates], new_followers,
@@ -465,6 +636,148 @@ def build_instagram_section(story, brand_key, brand_display, start, end):
         story.append(data_table(["Cidade", "Seguidores"], table_rows, col_widths=[120 * mm, 40 * mm]))
 
     story.append(PageBreak())
+
+
+def build_leads_narrative(m, cpl):
+    """Texto interpretando o funil — mesma lógica da skill de diagnóstico de
+    funil de leads: nomear o maior vazamento, não só reportar percentuais."""
+    total_leads = int(m.get("total_leads") or 0)
+    pct_no_owner = float(m.get("pct_no_owner") or 0)
+    pct_not_contacted = float(m.get("pct_not_contacted") or 0)
+    closed_won = int(m.get("closed_won") or 0)
+    close_rate_decided = float(m.get("close_rate_decided_pct") or 0)
+
+    sentences = []
+    if total_leads:
+        sentences.append(
+            f"A campanha gerou {total_leads} leads no período" +
+            (f", a um custo médio de R$ {fmt_num(cpl, 2)} por lead." if cpl else ".")
+        )
+    if total_leads and pct_not_contacted >= 20:
+        sentences.append(
+            f"{fmt_num(pct_not_contacted, 1)}% desses leads ainda não foram contatados — "
+            "esse é hoje o maior vazamento do funil, e é 100% operacional (não depende de "
+            "mais investimento em anúncio para ser corrigido)."
+        )
+    elif total_leads:
+        sentences.append(
+            f"Apenas {fmt_num(pct_not_contacted, 1)}% dos leads seguem sem contato, um bom sinal de atendimento."
+        )
+    if total_leads and pct_no_owner >= 50:
+        sentences.append(
+            f"{fmt_num(pct_no_owner, 1)}% dos leads não têm um responsável atribuído na planilha, "
+            "o que dificulta cobrar o acompanhamento de cada um."
+        )
+    if total_leads:
+        if closed_won:
+            plural = "leads viraram vendas fechadas" if closed_won > 1 else "lead virou venda fechada"
+            sentences.append(
+                f"{closed_won} {plural} — uma taxa de fechamento de "
+                f"{fmt_num(close_rate_decided, 1)}% entre os leads já decididos (ganhos ou perdidos)."
+            )
+        else:
+            sentences.append(
+                "Nenhum lead do período foi fechado como venda até agora — vale checar se o "
+                "gargalo está no atendimento, na oferta, ou se ainda é cedo no ciclo de decisão."
+            )
+    return " ".join(sentences) if sentences else "Sem leads registrados nesse período."
+
+
+def build_executive_summary(story, brand_key, brand_display, start, end):
+    """Leitura em texto do período inteiro, antes do detalhe por canal — soma
+    Meta + Google, aponta a maior variação e conecta com o funil de vendas
+    quando a marca tem planilha de leads configurada."""
+    meta_rows = read_csv_filtered("meta_ads_overview_*.csv", brand_display)
+    google_rows = read_csv_filtered("google_ads_overview_*.csv", brand_display)
+    meta_o = meta_rows[0] if meta_rows else None
+    google_o = google_rows[0] if google_rows else None
+    if not meta_o and not google_o:
+        return
+
+    def _f(row, field):
+        try:
+            return float(row.get(field) or 0) if row else 0.0
+        except (TypeError, ValueError):
+            return 0.0
+
+    total_spend = _f(meta_o, "spend") + _f(google_o, "cost")
+    total_spend_prev = _f(meta_o, "spend_prev") + _f(google_o, "cost_prev")
+    total_clicks = _f(meta_o, "clicks") + _f(google_o, "clicks")
+    total_clicks_prev = _f(meta_o, "clicks_prev") + _f(google_o, "clicks_prev")
+
+    spend_pct = ((total_spend - total_spend_prev) / total_spend_prev * 100) if total_spend_prev else None
+    clicks_pct = ((total_clicks - total_clicks_prev) / total_clicks_prev * 100) if total_clicks_prev else None
+
+    days = (end - start).days + 1
+    prev_start = start - datetime.timedelta(days=days)
+    prev_end = start - datetime.timedelta(days=1)
+
+    story.append(Paragraph("Resumo Executivo", h2))
+    story.append(Paragraph(
+        f"Comparando os últimos {days} dias ({start.strftime('%d/%m')} a {end.strftime('%d/%m')}) "
+        f"com o período imediatamente anterior de mesma duração "
+        f"({prev_start.strftime('%d/%m')} a {prev_end.strftime('%d/%m')}):",
+        normal,
+    ))
+    story.append(Spacer(1, 2 * mm))
+
+    if spend_pct is not None:
+        arrow = "aumentou" if spend_pct >= 0 else "caiu"
+        story.append(Paragraph(
+            f"• Investimento total em anúncios (Meta + Google) {arrow} {abs(spend_pct):.1f}%, "
+            f"de R$ {fmt_num(total_spend_prev, 2)} para R$ {fmt_num(total_spend, 2)}.",
+            normal,
+        ))
+    if clicks_pct is not None:
+        arrow = "cresceu" if clicks_pct >= 0 else "caiu"
+        story.append(Paragraph(
+            f"• Total de cliques {arrow} {abs(clicks_pct):.1f}%, "
+            f"de {fmt_num(total_clicks_prev)} para {fmt_num(total_clicks)}.",
+            normal,
+        ))
+
+    # Maior variação isolada entre os dois canais, pra apontar onde olhar primeiro
+    candidates = []
+    if meta_o:
+        for field, label in FIELD_LABELS_META:
+            info = interpret_change(field, meta_o.get(f"{field}_pct_change"))
+            if info:
+                candidates.append(("Meta Ads", label, info))
+    if google_o:
+        for field, label in FIELD_LABELS_GOOGLE:
+            info = interpret_change(field, google_o.get(f"{field}_pct_change"))
+            if info:
+                candidates.append(("Google Ads", label, info))
+    if candidates:
+        candidates.sort(key=lambda x: -x[2]["magnitude"])
+        channel, label, info = candidates[0]
+        tone = "vale manter/ampliar o investimento nessa frente" if info["is_good"] else "vale investigar antes de aumentar orçamento aí"
+        story.append(Paragraph(
+            f"• A maior variação do período foi em {channel}: {label.lower()} {info['direction']} "
+            f"{fmt_num(info['magnitude'], 1)}% — {tone}.",
+            normal,
+        ))
+
+    # Funil de vendas, se a marca tiver planilha configurada
+    leads_path = latest_csv(f"leads_funnel_{brand_key}_*.csv")
+    if leads_path:
+        with open(leads_path, encoding="utf-8") as f:
+            leads_rows = list(csv.DictReader(f))
+        if leads_rows:
+            m = leads_rows[0]
+            total_leads = int(m.get("total_leads") or 0)
+            if total_leads:
+                cpl = (total_spend / total_leads) if total_leads else 0
+                story.append(Paragraph(
+                    f"• No mesmo período, a planilha de leads registrou {total_leads} novos contatos "
+                    f"vindos da campanha — custo por lead de R$ {fmt_num(cpl, 2)} "
+                    f"(detalhe do funil na seção \"Funil de Vendas\", mais adiante).",
+                    normal,
+                ))
+
+    story.append(Spacer(1, 6 * mm))
+    story.append(HRFlowable(width="100%", color=colors.HexColor("#391694").clone(alpha=0.13), thickness=1))
+    story.append(Spacer(1, 4 * mm))
 
 
 def build_leads_section(story, brand_key, brand_display, start, end):
@@ -499,6 +812,9 @@ def build_leads_section(story, brand_key, brand_display, start, end):
         ("% nunca contatado", f"{fmt_num(m.get('pct_not_contacted'), 1)}%", "—"),
     ]
     story.append(scorecard_table(cards))
+
+    story.append(Spacer(1, 3 * mm))
+    story.append(Paragraph(build_leads_narrative(m, cpl), normal))
 
     if m.get("value_data_available") != "True":
         story.append(Spacer(1, 2 * mm))
@@ -547,6 +863,7 @@ def main() -> None:
                              topMargin=15 * mm, bottomMargin=15 * mm)
 
     story = [report_header(brand_display, start, end), Spacer(1, 8 * mm)]
+    build_executive_summary(story, args.brand, brand_display, start, end)
 
     if brand.get("meta_ads", {}).get("status") == "confirmed":
         build_meta_section(story, args.brand, brand_display, start, end)

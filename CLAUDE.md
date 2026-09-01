@@ -64,6 +64,33 @@ expirou em 16/05/2026, e a decisão do time foi não assinar plano pago.
     antes de gerar o PDF. Se a marca não tem planilha configurada, o passo
     só imprime aviso e segue (não quebra o pipeline).
 
+## Análise escrita + comparativo mês a mês no PDF (01/09/2026)
+
+- **Pedido do usuário**: "adicione mais informações por escrito... análise e
+  comparativo de um mês a outro" — os relatórios só mostravam número + uma
+  setinha de %, sem interpretação nem comparação explícita período atual x
+  anterior. `etl/generate_pdf_report.py` ganhou:
+  - **"Resumo Executivo"** — novo bloco logo após o header, antes de entrar
+    por canal: soma Meta + Google (investimento e cliques), aponta a maior
+    variação isolada do período pra dizer onde olhar primeiro, e conecta com
+    o funil de vendas (leads + CPL) quando a marca tem planilha configurada.
+  - **Texto interpretativo por canal** (Meta, Google, Instagram, Funil) —
+    2-4 frases geradas a partir do `pct_change` real de cada métrica (não é
+    texto fixo), classificando a variação (leve/expressiva/forte) e se é
+    positiva ou pede atenção (`GOOD_WHEN_UP`/`GOOD_WHEN_DOWN` por métrica).
+  - **Tabela "Comparativo com o período anterior"** — período atual x
+    anterior x variação, lado a lado, pra cada canal (além do card com a
+    setinha). Meta/Google usam os campos `*_prev`/`*_pct_change` que a
+    extração overview já calculava mas o relatório não expunha. Instagram
+    não tem overview CSV, então a comparação é uma query no SQLite pro
+    período anterior de mesma duração — só é exibida se o banco tiver
+    cobertura de pelo menos ~60% dos dias desse período anterior (menos que
+    isso e a % fica tecnicamente real mas estatisticamente enganosa — vira
+    aviso "sem dado suficiente" em vez de mostrar, ex.: achado real no teste,
+    2 dias soltos geravam +28.000% de "crescimento" de alcance).
+  - Concordância verbal em pt-BR corrigida por campo (`PLURAL_FIELDS`):
+    "Cliques/Impressões caíram" (plural) vs "Investimento caiu" (singular).
+
 ## Interface web (27/08/2026)
 
 - [web/app.py](web/app.py) — Flask, login por senha (sem cadastro de

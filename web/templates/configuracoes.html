@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Configurações{% endblock %}
+{% block content %}
+  <img src="{{ url_for('static', filename='idl_logo.png') }}" alt="Instituto da Liderança" class="logo">
+  <span class="badge">Painel interno</span>
+  <h1>Planilha de leads por marca</h1>
+  <p class="subtitle">Cole o link da planilha de gestão de leads/CRM de cada marca. Quando configurada, o relatório passa a incluir a seção "Funil de Vendas" (custo por lead, taxa de fechamento).</p>
+
+  {% if saved %}<div class="error" style="background:#DFF3DC;color:#1E8E3E;border-color:rgba(30,142,62,.2);">Salvo — a próxima geração de relatório dessa marca já usa esse link.</div>{% endif %}
+
+  <form method="post">
+    <label for="brand">Marca</label>
+    <select id="brand" name="brand">
+      {% for key, brand in brands.items() %}
+        <option value="{{ key }}" {{ 'selected' if key == selected_brand else '' }}>{{ brand.display_name }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="leads_sheet_url">Link da planilha de leads (Google Sheets)</label>
+    <input type="url" id="leads_sheet_url" name="leads_sheet_url" placeholder="https://docs.google.com/spreadsheets/d/..." value="{{ current_url or '' }}">
+
+    <button type="submit">Salvar</button>
+  </form>
+
+  <a class="logout" href="{{ url_for('dashboard') }}">&larr; Voltar ao painel</a>
+{% endblock %}

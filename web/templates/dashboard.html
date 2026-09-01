@@ -1,9 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Gerar relatório{% endblock %}
 {% block content %}
+  <img src="{{ url_for('static', filename='idl_logo.png') }}" alt="Instituto da Liderança" class="logo">
+  {% if role == 'admin' %}<span class="badge">Painel interno</span>{% endif %}
   <h1>{% if selected_brand_name %}{{ selected_brand_name }}{% else %}Escolha uma marca{% endif %}</h1>
   <p class="subtitle">
-    {% if role == 'admin' %}Painel interno — todas as marcas{% else %}Gere seu relatório em PDF{% endif %}
+    {% if role == 'admin' %}Todas as marcas{% else %}Gere seu relatório em PDF{% endif %}
   </p>
 
   {% if role == 'admin' %}
@@ -34,9 +36,6 @@
         btn.disabled = true;
         btn.textContent = 'Gerando...';
         document.getElementById('spinner').style.display = 'block';
-        // O download não navega a página (é um anexo), então não tem como
-        // saber com certeza quando terminou — depois de um tempo plausível,
-        // reabilita o botão e avisa que o PDF já deve ter baixado.
         setTimeout(function () {
           btn.disabled = false;
           btn.textContent = 'Gerar relatório';
@@ -47,5 +46,8 @@
     </script>
   {% endif %}
 
+  {% if role == 'admin' %}
+    <a class="link-muted" href="{{ url_for('configuracoes') }}">Configurar planilha de leads</a>
+  {% endif %}
   <a class="logout" href="{{ url_for('logout') }}">Sair</a>
 {% endblock %}

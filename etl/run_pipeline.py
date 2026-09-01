@@ -59,6 +59,8 @@ def main() -> None:
     run(["etl/extract_google_ads_overview.py", "--days", str(args.days)], "Google Ads (overview)")
     run(["etl/extract_instagram_demographics.py"], "Instagram (demografia)")
     run(["etl/load_to_sqlite.py"], "Carregar no banco")
+    run(["etl/extract_leads_funnel.py", "--brand", args.brand, "--days", str(args.days)],
+        "Funil de vendas (se planilha de leads configurada)")
     run(["etl/generate_pdf_report.py", "--brand", args.brand, "--days", str(args.days)], "Gerar PDF")
 
     # Acha o PDF mais recente dessa marca

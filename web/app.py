@@ -25,6 +25,7 @@ from flask import Flask, abort, redirect, render_template, request, send_file, s
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 from etl.common import load_config  # noqa: E402
+from etl.leads_config import get_leads_sheet_url, set_leads_sheet_url  # noqa: E402
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-only-troque-em-producao")
@@ -121,6 +122,39 @@ def dashboard():
         selected_brand=selected_brand,
         selected_brand_name=brands[selected_brand]["display_name"] if selected_brand else None,
         day_presets=DAY_PRESETS,
+    )
+
+
+@app.route("/configuracoes", methods=["GET", "POST"])
+def configuracoes():
+    redirect_resp = require_login()
+    if redirect_resp:
+        return redirect_resp
+    role, _ = current_role()
+    if role != "admin":
+        abort(403)
+
+    brands = get_brands()
+    saved = False
+
+    if request.method == "POST":
+        brand_key = request.form.get("brand")
+        url = request.form.get("leads_sheet_url", "").strip()
+        if brand_key in brands and url:
+            set_leads_sheet_url(brand_key, url)
+            saved = True
+        selected_brand = brand_key
+    else:
+        selected_brand = request.args.get("brand") or next(iter(brands))
+
+    current_url = get_leads_sheet_url(selected_brand) if selected_brand in brands else None
+
+    return render_template(
+        "configuracoes.html",
+        brands=brands,
+        selected_brand=selected_brand,
+        current_url=current_url,
+        saved=saved,
     )
 
 

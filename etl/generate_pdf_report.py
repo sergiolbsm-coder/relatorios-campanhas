@@ -1,8 +1,10 @@
 """
-Gera um relatório em PDF por marca, no estilo do relatório de referência
-(mLabs): visão geral com comparação de período, funil, série temporal,
-tabelas de campanha, demografia — por canal (Meta Ads, Google Ads,
-Instagram). GMB fica de fora — pendente de aprovação da API (item 1.3).
+Gera um relatório em PDF por marca, na identidade visual do Instituto da
+Liderança (agência por trás da ferramenta): visão geral com comparação de
+período, funil, série temporal, tabelas de campanha, demografia — por canal
+(Meta Ads, Google Ads, Instagram) + funil de vendas (se a marca tiver uma
+planilha de leads configurada). GMB fica de fora — pendente de aprovação da
+API (item 1.3).
 
 Uso:
     set -a && source .env && set +a
@@ -24,34 +26,60 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import matplotlib.font_manager as fm
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image,
-    PageBreak, KeepTogether,
+    PageBreak, KeepTogether, HRFlowable,
 )
-from reportlab.lib.enums import TA_LEFT
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from etl.common import DATA_DIR, DB_PATH, PROJECT_ROOT, load_config
 
-ORANGE = colors.HexColor("#F4762A")
-DARK = colors.HexColor("#1C1C1E")
-GRAY_BG = colors.HexColor("#F2F2F2")
+# ---------------------------------------------------------------------------
+# Identidade visual — Instituto da Liderança (ver skill idl-design)
+# ---------------------------------------------------------------------------
+MAGENTA = colors.HexColor("#FF0060")
+PURPLE = colors.HexColor("#391694")
+PURPLE_DARK = colors.HexColor("#261062")
+TEXT = colors.HexColor("#24153E")
+TEXT_MUTED = colors.HexColor("#6F667E")
+BG_SOFT = colors.HexColor("#F4F0FB")
+WHITE = colors.HexColor("#FFFFFF")
 GREEN = colors.HexColor("#1E8E3E")
 RED = colors.HexColor("#D93025")
 
+FONTS_DIR = PROJECT_ROOT / "etl" / "assets" / "fonts"
+LOGO_PATH = PROJECT_ROOT / "etl" / "assets" / "idl_logo.png"
 CHART_DIR = PROJECT_ROOT / "etl" / "data" / "charts"
 CHART_DIR.mkdir(parents=True, exist_ok=True)
 
+# Registra as fontes reais do IDL no reportlab (PDF) e no matplotlib (gráficos)
+pdfmetrics.registerFont(TTFont("DMSans", str(FONTS_DIR / "DMSans-Regular.ttf")))
+pdfmetrics.registerFont(TTFont("DMSans-Bold", str(FONTS_DIR / "DMSans-Bold.ttf")))
+pdfmetrics.registerFont(TTFont("Cormorant-SemiBold", str(FONTS_DIR / "CormorantGaramond-SemiBold.ttf")))
+pdfmetrics.registerFont(TTFont("Cormorant-Bold", str(FONTS_DIR / "CormorantGaramond-Bold.ttf")))
+pdfmetrics.registerFont(TTFont("JetBrainsMono", str(FONTS_DIR / "JetBrainsMono-Medium.ttf")))
+
+for f in FONTS_DIR.glob("*.ttf"):
+    fm.fontManager.addfont(str(f))
+plt.rcParams["font.family"] = "DM Sans"
+
 styles = getSampleStyleSheet()
-h1 = ParagraphStyle("h1", parent=styles["Heading1"], textColor=DARK, fontSize=18, spaceAfter=2)
-h2 = ParagraphStyle("h2", parent=styles["Heading2"], textColor=DARK, fontSize=13, spaceBefore=10, spaceAfter=6)
-small = ParagraphStyle("small", parent=styles["Normal"], fontSize=8, textColor=colors.gray)
-normal = ParagraphStyle("normal", parent=styles["Normal"], fontSize=9)
+h1 = ParagraphStyle("h1", parent=styles["Heading1"], fontName="Cormorant-Bold",
+                     textColor=PURPLE_DARK, fontSize=26, leading=30, spaceAfter=2)
+h2 = ParagraphStyle("h2", parent=styles["Heading2"], fontName="Cormorant-Bold",
+                     textColor=PURPLE_DARK, fontSize=16, spaceBefore=10, spaceAfter=6)
+small = ParagraphStyle("small", parent=styles["Normal"], fontName="JetBrainsMono",
+                        fontSize=8, textColor=TEXT_MUTED)
+normal = ParagraphStyle("normal", parent=styles["Normal"], fontName="DMSans-Bold",
+                         fontSize=9, textColor=TEXT)
 
 
 def latest_csv(pattern: str):
@@ -88,22 +116,44 @@ def fmt_pct(v):
     return f"{arrow} {abs(v):.1f}%"
 
 
+def report_header(brand_display, start, end):
+    """Cabeçalho no padrão IDL: logo + moldura magenta (ver skill idl-design,
+    seção 6 — 'Relatórios')."""
+    logo = Image(str(LOGO_PATH), width=32 * mm, height=32 * mm) if LOGO_PATH.exists() else ""
+    title_cell = [
+        Paragraph(f"Relatório de Campanhas — {brand_display}", h1),
+        Paragraph(f"Período: {start.strftime('%d/%m/%Y')} a {end.strftime('%d/%m/%Y')}", small),
+    ]
+    t = Table([[logo, title_cell]], colWidths=[38 * mm, 132 * mm])
+    t.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("BOX", (0, 0), (-1, -1), 1.4, MAGENTA),
+        ("LEFTPADDING", (0, 0), (-1, -1), 14),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 14),
+        ("TOPPADDING", (0, 0), (-1, -1), 14),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 14),
+        ("ROUNDEDCORNERS", [10, 10, 10, 10]),
+    ]))
+    return t
+
+
 def scorecard_table(cards):
     """cards: list of (label, value, pct_change_str). 3 por linha."""
     rows, row = [], []
     for i, (label, value, pct) in enumerate(cards):
-        pct_color_hex = "#1e8e3e" if (pct.startswith("↑") or pct == "novo") else ("#d93025" if pct.startswith("↓") else "#888888")
+        pct_color_hex = "#1e8e3e" if (pct.startswith("↑") or pct == "novo") else ("#d93025" if pct.startswith("↓") else "#6f667e")
         cell = Table(
-            [[Paragraph(f"<font size=8 color='#666666'>{label}</font>")],
-             [Paragraph(f"<font size=15><b>{value}</b></font>")],
-             [Paragraph(f"<font size=8 color='{pct_color_hex}'>{pct}</font>")]],
+            [[Paragraph(f"<font name='JetBrainsMono' size=7 color='#6F667E'>{label}</font>")],
+             [Paragraph(f"<font name='Cormorant-Bold' size=18 color='#24153E'>{value}</font>")],
+             [Paragraph(f"<font name='JetBrainsMono' size=8 color='{pct_color_hex}'>{pct}</font>")]],
             colWidths=[55 * mm],
         )
         cell.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, -1), GRAY_BG),
+            ("BACKGROUND", (0, 0), (-1, -1), BG_SOFT),
             ("LEFTPADDING", (0, 0), (-1, -1), 8),
-            ("TOPPADDING", (0, 0), (-1, -1), 6),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ("TOPPADDING", (0, 0), (-1, -1), 7),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+            ("LINEBELOW", (0, 0), (-1, 0), 2, MAGENTA),
         ]))
         row.append(cell)
         if len(row) == 3:
@@ -122,11 +172,14 @@ def data_table(header, rows, col_widths=None):
     data = [header] + rows
     t = Table(data, colWidths=col_widths, repeatRows=1)
     t.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), DARK),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("BACKGROUND", (0, 0), (-1, 0), PURPLE_DARK),
+        ("TEXTCOLOR", (0, 0), (-1, 0), WHITE),
+        ("FONTNAME", (0, 0), (-1, 0), "DMSans-Bold"),
+        ("FONTNAME", (0, 1), (-1, -1), "DMSans"),
         ("FONTSIZE", (0, 0), (-1, -1), 8),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, GRAY_BG]),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#DDDDDD")),
+        ("TEXTCOLOR", (0, 1), (-1, -1), TEXT),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [WHITE, BG_SOFT]),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#391694").clone(alpha=0.13)),
         ("TOPPADDING", (0, 0), (-1, -1), 4),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
         ("LEFTPADDING", (0, 0), (-1, -1), 4),
@@ -134,15 +187,23 @@ def data_table(header, rows, col_widths=None):
     return t
 
 
-def line_chart(dates, series: dict, title, filename, fmt_y=None):
-    fig, ax = plt.subplots(figsize=(6.8, 2.6), dpi=150)
-    for label, values in series.items():
-        ax.plot(dates, values, label=label, linewidth=1.6)
-    ax.legend(fontsize=7, loc="upper left", frameon=False)
-    ax.set_title(title, fontsize=9, loc="left", color="#333333")
-    ax.tick_params(axis="x", labelsize=6, rotation=45)
-    ax.tick_params(axis="y", labelsize=7)
+def _mpl_style(ax, title):
+    ax.set_title(title, fontsize=9, loc="left", color="#24153E", fontweight="bold")
+    ax.tick_params(axis="x", labelsize=6, rotation=45, colors="#6F667E")
+    ax.tick_params(axis="y", labelsize=7, colors="#6F667E")
     ax.spines[["top", "right"]].set_visible(False)
+    ax.spines[["left", "bottom"]].set_color("#391694")
+    ax.spines[["left", "bottom"]].set_alpha(0.2)
+
+
+def line_chart(dates, series: dict, title, filename):
+    palette = ["#FF0060", "#391694", "#00D0C9"]
+    fig, ax = plt.subplots(figsize=(6.8, 2.6), dpi=150)
+    for i, (label, values) in enumerate(series.items()):
+        ax.plot(dates, values, label=label, linewidth=1.8, color=palette[i % len(palette)])
+    if len(series) > 1:
+        ax.legend(fontsize=7, loc="upper left", frameon=False)
+    _mpl_style(ax, title)
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%d/%m"))
     fig.tight_layout()
     path = CHART_DIR / filename
@@ -154,14 +215,12 @@ def line_chart(dates, series: dict, title, filename, fmt_y=None):
 def bar_chart(labels, values, title, filename, horizontal=False):
     fig, ax = plt.subplots(figsize=(6.8, 2.6), dpi=150)
     if horizontal:
-        ax.barh(labels, values, color=ORANGE.hexval()[2:] and "#F4762A")
+        ax.barh(labels, values, color="#FF0060")
         ax.invert_yaxis()
     else:
-        ax.bar(labels, values, color="#F4762A")
+        ax.bar(labels, values, color="#FF0060")
         ax.tick_params(axis="x", labelsize=7, rotation=30)
-    ax.set_title(title, fontsize=9, loc="left", color="#333333")
-    ax.tick_params(axis="y", labelsize=7)
-    ax.spines[["top", "right"]].set_visible(False)
+    _mpl_style(ax, title)
     fig.tight_layout()
     path = CHART_DIR / filename
     fig.savefig(path)
@@ -171,9 +230,9 @@ def bar_chart(labels, values, title, filename, horizontal=False):
 
 def pie_chart(labels, values, title, filename):
     fig, ax = plt.subplots(figsize=(4, 3), dpi=150)
-    ax.pie(values, labels=labels, autopct="%1.0f%%", textprops={"fontsize": 7},
-           colors=["#F4762A", "#FBB584", "#FDE4CE", "#8C8C8C", "#C7C7C7"])
-    ax.set_title(title, fontsize=9, color="#333333")
+    ax.pie(values, labels=labels, autopct="%1.0f%%", textprops={"fontsize": 7, "color": "#24153E"},
+           colors=["#FF0060", "#391694", "#00D0C9", "#4D1DBF", "#6F667E"])
+    ax.set_title(title, fontsize=9, color="#24153E", fontweight="bold")
     fig.tight_layout()
     path = CHART_DIR / filename
     fig.savefig(path)
@@ -184,7 +243,7 @@ def pie_chart(labels, values, title, filename):
 # ---------------------------------------------------------------------------
 
 def build_meta_section(story, brand_key, brand_display, start, end):
-    story.append(Paragraph("∞ Meta Ads — Visão Geral", h2))
+    story.append(Paragraph("Meta Ads — Visão Geral", h2))
 
     overview = read_csv_filtered("meta_ads_overview_*.csv", brand_display)
     if overview:
@@ -201,7 +260,6 @@ def build_meta_section(story, brand_key, brand_display, start, end):
         ]
         story.append(scorecard_table(cards))
 
-    # Série temporal (custo e cliques por dia) via SQLite
     conn = sqlite3.connect(DB_PATH)
     rows = conn.execute(
         """
@@ -222,7 +280,6 @@ def build_meta_section(story, brand_key, brand_display, start, end):
         chart_path2 = line_chart(dates, {"Custo (R$)": cost}, "Custo por dia", f"{brand_key}_meta_cost.png")
         story.append(Image(chart_path2, width=170 * mm, height=170 * mm * 2.6 / 6.8))
 
-    # Top campanhas (agregado do período, via SQLite)
     camp_rows = conn.execute(
         """
         SELECT f.campaign_name, SUM(f.clicks), SUM(f.impressions), SUM(f.cost)
@@ -242,7 +299,6 @@ def build_meta_section(story, brand_key, brand_display, start, end):
             table_rows, col_widths=[80 * mm, 30 * mm, 30 * mm, 30 * mm],
         ))
 
-    # Demografia
     demo = read_csv_filtered("meta_ads_demographics_*.csv", brand_display)
     if demo:
         agg = {}
@@ -255,7 +311,6 @@ def build_meta_section(story, brand_key, brand_display, start, end):
             chart_path = bar_chart(labels, values, "Impressões por faixa etária", f"{brand_key}_meta_age.png")
             story.append(Image(chart_path, width=170 * mm, height=170 * mm * 2.6 / 6.8))
 
-    # Top anúncios
     ads = read_csv_filtered("meta_ads_top_ads_*.csv", brand_display)
     if ads:
         ads_sorted = sorted(ads, key=lambda r: int(r["clicks"] or 0), reverse=True)[:8]
@@ -272,7 +327,7 @@ def build_meta_section(story, brand_key, brand_display, start, end):
 
 
 def build_google_section(story, brand_key, brand_display, start, end):
-    story.append(Paragraph("G Google Ads — Visão Geral", h2))
+    story.append(Paragraph("Google Ads — Visão Geral", h2))
 
     overview = read_csv_filtered("google_ads_overview_*.csv", brand_display)
     if overview:
@@ -361,7 +416,7 @@ def build_google_section(story, brand_key, brand_display, start, end):
 
 
 def build_instagram_section(story, brand_key, brand_display, start, end):
-    story.append(Paragraph("○ Instagram Insights — Visão Geral", h2))
+    story.append(Paragraph("Instagram Insights — Visão Geral", h2))
 
     conn = sqlite3.connect(DB_PATH)
     rows = conn.execute(
@@ -412,6 +467,53 @@ def build_instagram_section(story, brand_key, brand_display, start, end):
     story.append(PageBreak())
 
 
+def build_leads_section(story, brand_key, brand_display, start, end):
+    """Funil de vendas — só aparece se a marca tiver uma planilha de leads
+    configurada (ver etl/leads_config.py e etl/extract_leads_funnel.py)."""
+    path = latest_csv(f"leads_funnel_{brand_key}_*.csv")
+    if not path:
+        return
+    with open(path, encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+    if not rows:
+        return
+    m = rows[0]
+
+    story.append(Paragraph("Funil de Vendas", h2))
+    story.append(Paragraph(
+        "Conecta o investimento em anúncio ao resultado comercial — dado lido "
+        "direto da planilha de gestão de leads da marca.", small,
+    ))
+    story.append(Spacer(1, 3 * mm))
+
+    total_leads = int(m.get("total_leads") or 0)
+    total_cost = float(m.get("ad_cost_period") or 0)
+    cpl = (total_cost / total_leads) if total_leads else 0
+
+    cards = [
+        ("Leads no período", fmt_num(total_leads), "—"),
+        ("Custo por lead (CPL)", f"R$ {fmt_num(cpl, 2)}" if total_leads else "—", "—"),
+        ("Taxa de fechamento (decididos)", f"{fmt_num(m.get('close_rate_decided_pct'), 1)}%", "—"),
+        ("Vendas fechadas", fmt_num(m.get("closed_won")), "—"),
+        ("% sem proprietário", f"{fmt_num(m.get('pct_no_owner'), 1)}%", "—"),
+        ("% nunca contatado", f"{fmt_num(m.get('pct_not_contacted'), 1)}%", "—"),
+    ]
+    story.append(scorecard_table(cards))
+
+    if m.get("value_data_available") != "True":
+        story.append(Spacer(1, 2 * mm))
+        story.append(Paragraph(
+            "<font color='#D93025'><b>Nota:</b></font> a planilha de leads não "
+            "tem valor de venda registrado nas linhas fechadas — por isso este "
+            "relatório mostra custo por lead e taxa de conversão, mas não "
+            "retorno em reais (CAC/ROI). Preencher \"Valor Proposta Negociada\" "
+            "nas vendas fechadas destrava essa métrica nos próximos relatórios.",
+            normal,
+        ))
+
+    story.append(PageBreak())
+
+
 def build_gmb_note(story):
     story.append(Paragraph("Google Meu Negócio", h2))
     story.append(Paragraph(
@@ -444,10 +546,7 @@ def main() -> None:
                              leftMargin=15 * mm, rightMargin=15 * mm,
                              topMargin=15 * mm, bottomMargin=15 * mm)
 
-    story = []
-    story.append(Paragraph(f"Relatório {brand_display}", h1))
-    story.append(Paragraph(f"Período: {start.strftime('%d/%m/%Y')} - {end.strftime('%d/%m/%Y')}", small))
-    story.append(Spacer(1, 6 * mm))
+    story = [report_header(brand_display, start, end), Spacer(1, 8 * mm)]
 
     if brand.get("meta_ads", {}).get("status") == "confirmed":
         build_meta_section(story, args.brand, brand_display, start, end)
@@ -455,6 +554,7 @@ def main() -> None:
         build_google_section(story, args.brand, brand_display, start, end)
     if brand.get("instagram_insights", {}).get("status") == "confirmed":
         build_instagram_section(story, args.brand, brand_display, start, end)
+    build_leads_section(story, args.brand, brand_display, start, end)
     build_gmb_note(story)
 
     doc.build(story)

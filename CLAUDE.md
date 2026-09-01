@@ -24,6 +24,46 @@ expirou em 16/05/2026, e a decisão do time foi não assinar plano pago.
 - `dashboard/` — camada de visualização (Fase 4).
 - `docs/` — decisões de projeto e documentação.
 
+## Identidade visual IDL + Funil de Vendas (01/09/2026)
+
+- **Todos os relatórios (PDF e interface web) agora usam a identidade do
+  Instituto da Liderança** (a agência por trás da ferramenta — aplica pra
+  relatórios de todos os clientes, não só o próprio IDL). Tokens/fontes/logo
+  vêm da skill `idl-design`. Fontes reais (DM Sans, Cormorant Garamond,
+  JetBrains Mono) baixadas do Google Fonts e versionadas em
+  `etl/assets/fonts/` — registradas no reportlab (PDF) e no matplotlib
+  (gráficos), não são fallback. Logo em `etl/assets/idl_logo.png` (PDF) e
+  `web/static/idl_logo.png` (interface).
+  - Ao criar qualquer página/relatório novo do projeto, seguir o mesmo
+    padrão — reabrir a skill `idl-design` se os tokens exatos forem
+    necessários de novo.
+
+- **Funil de Vendas conectado ao relatório** — nasceu do diagnóstico de
+  funil de leads feito pra Luto União (skill `diagnostico-funil-leads`),
+  virou funcionalidade permanente:
+  - [etl/leads_config.py](etl/leads_config.py) — guarda o link da planilha
+    de leads/CRM de cada marca numa aba (`config_marcas`) da mesma planilha
+    Google já usada pelo projeto (não no disco do Render, que é temporário).
+  - [etl/extract_leads_funnel.py](etl/extract_leads_funnel.py) — lê a
+    planilha configurada (deduplicando leads por nome entre abas, ignorando
+    abas "cópia"), casa colunas por palavra-chave (não posição fixa, pra
+    tolerar variação entre clientes) e calcula: total de leads no período,
+    % sem contato, % sem proprietário, taxa de fechamento, e se há valor de
+    venda registrado (pré-requisito pra CAC/ROI real — geralmente não tem,
+    e o relatório avisa isso explicitamente em vez de inventar retorno).
+  - Seção "Funil de Vendas" no PDF (`generate_pdf_report.py`) só aparece se
+    a marca tiver planilha configurada — combina custo por lead (CPL) real
+    (gasto de anúncio do período ÷ leads do período) com as métricas acima.
+  - **Configurável pela própria interface web**, sem editar código: rota
+    `/configuracoes` (só admin) — formulário por marca, link "Configurar
+    planilha de leads" no painel admin.
+  - Testado ponta a ponta com a planilha real da Luto União (79 leads no
+    período, CPL R$ 18,90, taxa de fechamento 12,5% sobre decididos).
+  - `run_pipeline.py` roda essa extração automaticamente depois de carregar
+    o banco (precisa do gasto de anúncio já carregado pro cálculo de CPL) e
+    antes de gerar o PDF. Se a marca não tem planilha configurada, o passo
+    só imprime aviso e segue (não quebra o pipeline).
+
 ## Interface web (27/08/2026)
 
 - [web/app.py](web/app.py) — Flask, login por senha (sem cadastro de

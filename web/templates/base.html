@@ -4,40 +4,81 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Relatórios de Campanhas{% endblock %}</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..800;1,9..40,300..800&family=Cormorant+Garamond:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
-    :root { --orange: #F4762A; --dark: #1C1C1E; --bg: #FAFAFA; }
+    :root {
+      --idl-magenta: #FF0060;
+      --idl-purple: #391694;
+      --idl-purple-dark: #261062;
+      --idl-text: #24153E;
+      --idl-text-muted: #6F667E;
+      --idl-background: #FBF9FF;
+      --idl-background-soft: #F4F0FB;
+      --idl-white: #FFFFFF;
+      --idl-border: rgba(57,22,148,.13);
+    }
     * { box-sizing: border-box; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: var(--bg); color: var(--dark); margin: 0;
+      font-family: 'DM Sans', sans-serif;
+      background: var(--idl-background); color: var(--idl-text); margin: 0;
       display: flex; align-items: center; justify-content: center; min-height: 100vh;
+      background-image:
+        radial-gradient(ellipse 60% 40% at 15% 20%, rgba(255,0,96,.06) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 50% at 85% 75%, rgba(77,29,191,.04) 0%, transparent 55%);
     }
     .card {
-      background: white; border-radius: 12px; padding: 32px 36px;
-      box-shadow: 0 2px 16px rgba(0,0,0,0.08); width: 100%; max-width: 440px;
+      background: var(--idl-white); border-radius: 16px; padding: 36px 40px;
+      box-shadow: 0 8px 32px rgba(57,22,148,.12); width: 100%; max-width: 460px;
+      border: 1px solid var(--idl-border);
     }
-    h1 { font-size: 20px; margin: 0 0 4px; }
-    p.subtitle { color: #777; font-size: 13px; margin: 0 0 24px; }
-    label { display: block; font-size: 13px; color: #555; margin: 14px 0 4px; }
-    input[type=password], input[type=text], select {
-      width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px;
-      font-size: 14px;
+    .logo { display: block; height: 56px; width: auto; margin: 0 auto 18px; }
+    h1 {
+      font-family: 'Cormorant Garamond', serif; font-weight: 700; font-size: 26px;
+      margin: 0 0 4px; color: var(--idl-purple-dark); text-align: center;
     }
+    p.subtitle { color: var(--idl-text-muted); font-size: 13px; margin: 0 0 24px; text-align: center; }
+    label {
+      display: block; font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      letter-spacing: .05em; text-transform: uppercase; color: var(--idl-text-muted);
+      margin: 14px 0 6px;
+    }
+    input[type=password], input[type=text], input[type=url], select {
+      width: 100%; padding: 12px 14px; border: 1px solid var(--idl-border); border-radius: 8px;
+      font-size: 14px; font-family: 'DM Sans', sans-serif; color: var(--idl-text);
+      outline: none; transition: border-color .25s; background: var(--idl-white);
+    }
+    input:focus, select:focus { border-color: var(--idl-magenta); }
     button {
-      background: var(--orange); color: white; border: none; border-radius: 8px;
-      padding: 12px 20px; font-size: 14px; font-weight: 600; cursor: pointer;
-      width: 100%; margin-top: 20px;
+      background: linear-gradient(135deg, #261062, #FF0060); color: var(--idl-white);
+      border: none; border-radius: 8px; padding: 13px 20px; font-family: 'DM Sans', sans-serif;
+      font-size: 14px; font-weight: 700; letter-spacing: .02em; cursor: pointer;
+      width: 100%; margin-top: 20px; transition: all .25s;
     }
-    button:hover { opacity: 0.9; }
-    button:disabled { opacity: 0.6; cursor: wait; }
-    .error { background: #FDECEA; color: #B3261E; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 12px; }
-    a.logout { display: block; text-align: center; margin-top: 18px; font-size: 12px; color: #999; text-decoration: none; }
+    button:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(255,0,96,.3); }
+    button:disabled { opacity: 0.6; cursor: wait; transform: none; }
+    .error {
+      background: #FDECEA; color: #B3261E; padding: 10px 14px; border-radius: 8px;
+      font-size: 13px; margin-bottom: 12px; border: 1px solid rgba(179,38,30,.15);
+    }
+    a.logout, a.link-muted {
+      display: block; text-align: center; margin-top: 18px; font-size: 12px;
+      color: var(--idl-text-muted); text-decoration: none;
+    }
+    a.logout:hover, a.link-muted:hover { color: var(--idl-magenta); }
     .brand-list a {
-      display: block; padding: 10px 14px; border: 1px solid #eee; border-radius: 8px;
-      margin-bottom: 8px; text-decoration: none; color: var(--dark); font-size: 14px;
+      display: block; padding: 12px 16px; border: 1px solid var(--idl-border); border-radius: 8px;
+      margin-bottom: 8px; text-decoration: none; color: var(--idl-text); font-size: 14px;
+      font-weight: 500; transition: all .2s;
     }
-    .brand-list a.active { border-color: var(--orange); background: #FFF4EC; }
-    #spinner { display: none; text-align: center; margin-top: 14px; font-size: 13px; color: #777; }
+    .brand-list a:hover { border-color: rgba(255,0,96,.35); }
+    .brand-list a.active { border-color: var(--idl-magenta); background: rgba(255,0,96,.06); }
+    #spinner { display: none; text-align: center; margin-top: 14px; font-size: 13px; color: var(--idl-text-muted); }
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 100px;
+      font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--idl-magenta); background: rgba(255,0,96,.07);
+      border: 1px solid var(--idl-border); margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>

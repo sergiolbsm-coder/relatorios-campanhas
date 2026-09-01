@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 {% block title %}Erro ao gerar relatório{% endblock %}
 {% block content %}
+  <img src="{{ url_for('static', filename='idl_logo.png') }}" alt="Instituto da Liderança" class="logo">
   <h1>Não deu pra gerar o relatório</h1>
   <p class="subtitle">Alguma extração falhou. Detalhes técnicos abaixo (mande pro Sergio se precisar de ajuda):</p>
-  <pre style="background:#f5f5f5; padding:12px; border-radius:8px; font-size:11px; overflow-x:auto; white-space:pre-wrap;">{{ log }}</pre>
+  <pre style="background:var(--idl-background-soft); padding:12px; border-radius:8px; font-size:11px; overflow-x:auto; white-space:pre-wrap; font-family:'JetBrains Mono',monospace; color:var(--idl-text);">{{ log }}</pre>
   <a class="logout" href="javascript:history.back()">&larr; Voltar</a>
 {% endblock %}

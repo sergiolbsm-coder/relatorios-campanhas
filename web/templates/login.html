@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Login — Relatórios de Campanhas{% endblock %}
 {% block content %}
+  <img src="{{ url_for('static', filename='idl_logo.png') }}" alt="Instituto da Liderança" class="logo">
   <h1>Relatórios de Campanhas</h1>
   <p class="subtitle">Digite a senha de acesso (equipe ou cliente)</p>
   {% if error %}<div class="error">{{ error }}</div>{% endif %}

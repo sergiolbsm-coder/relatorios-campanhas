@@ -32,3 +32,7 @@ services:
         sync: false
       - key: META_ACCESS_TOKEN
         sync: false
+      - key: GOOGLE_SHEETS_REFRESH_TOKEN
+        sync: false
+      - key: GOOGLE_SHEETS_SPREADSHEET_ID
+        sync: false

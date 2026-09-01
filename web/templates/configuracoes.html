@@ -7,6 +7,7 @@
   <p class="subtitle">Cole o link da planilha de gestão de leads/CRM de cada marca. Quando configurada, o relatório passa a incluir a seção "Funil de Vendas" (custo por lead, taxa de fechamento).</p>
 
   {% if saved %}<div class="error" style="background:#DFF3DC;color:#1E8E3E;border-color:rgba(30,142,62,.2);">Salvo — a próxima geração de relatório dessa marca já usa esse link.</div>{% endif %}
+  {% if config_error %}<div class="error">{{ config_error }}</div>{% endif %}
 
   <form method="post">
     <label for="brand">Marca</label>
